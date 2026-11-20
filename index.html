@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#fff8ed"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><title>Farbzauber – Mitmachspiel</title>
+<style>
+:root{font-family:ui-rounded,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#403556;background:#fff8ed}*{box-sizing:border-box}body{margin:0;min-height:100dvh;display:flex;justify-content:center;align-items:flex-start}main{width:min(100%,720px);padding:clamp(10px,3vw,24px);text-align:center}header{font-size:clamp(24px,4.5vw,33px);font-weight:850;margin:8px 0 4px}#prompt{font-size:clamp(19px,3.3vw,26px);font-weight:750;line-height:1.3;min-height:66px;display:flex;justify-content:center;align-items:center;margin:8px 0}#scene{position:relative;width:100%;height:clamp(340px,54vh,500px);background:#fffef9;border:2px solid #eee2d3;border-radius:25px;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}#scene canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}#hint{min-height:31px;font-size:15px;color:#72687e;margin:10px 0}.blob{position:absolute;border-radius:48% 52% 43% 57% / 53% 45% 55% 47%;box-shadow:inset -8px -9px 0 #00000009;touch-action:none;cursor:pointer;user-select:none;transition:opacity .35s,transform .4s}.dot{position:absolute;border-radius:50%;touch-action:none;cursor:pointer;transition:opacity .5s,transform .45s,left .6s,top .6s}.controls{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}button{font:inherit;border:0;border-radius:16px;padding:11px 19px;background:#7857be;color:white;font-weight:750;cursor:pointer;min-height:45px}button.secondary{background:#eee8f8;color:#5e438e}button:disabled{opacity:.45}#counter{font-size:13px;color:#86798d;margin:10px 0}#next{display:none}#back{display:none}.paint-label{position:absolute;bottom:20px;left:0;width:100%;text-align:center;font-size:21px;font-weight:850;pointer-events:none}.enddot{animation:floaty 2s ease-in-out infinite alternate}@keyframes floaty{from{transform:translate(-7px,5px)}to{transform:translate(9px,-12px)}}@media(prefers-reduced-motion:reduce){.enddot{animation:none}}.hero{display:flex;align-items:center;justify-content:center;height:100%;font-size:80px;line-height:1}.pill{display:inline-block;border-radius:15px;padding:8px 14px;background:#f5ebfc;color:#63408c}
+</style></head><body><main><header>Die zauberhaften Farbkleckse</header><div id="prompt" aria-live="polite"></div><div id="scene" aria-label="Interaktives Farbspiel"></div><div id="hint" aria-live="polite"></div><div class="controls"><button id="back" class="secondary">← Zurück</button><button id="next">Spiel starten</button><button id="restart" class="secondary" style="display:none">↻ Neustart</button></div><div id="counter"></div></main>
+<script>
+(()=>{'use strict';
+const scene=document.getElementById('scene'),prompt=document.getElementById('prompt'),hint=document.getElementById('hint'),next=document.getElementById('next'),back=document.getElementById('back'),restart=document.getElementById('restart'),counter=document.getElementById('counter');
+const colors={rot:'#ED505A',gelb:'#F7CE35',blau:'#479FE9',gruen:'#49B879',orange:'#F49C3C',lila:'#A77CD7',rosa:'#EE91BE',weiss:'#FAFAFA'};
+const tasks=[
+['Tippe dreimal auf den roten Klecks.','tap','rot',3],
+['Tippe dreimal auf den gelben Klecks.','tap','gelb',3],
+['Tippe dreimal auf den blauen Klecks.','tap','blau',3],
+['Wische mit dem roten Klecks hin und her!','paint','rot'],
+['Mach den blauen Klecks riesengroß!','size','blau',1.8],
+['Mach den gelben Klecks ganz klein!','size','gelb',0.48],
+['Schiebe Rot zu Gelb und mische die Farben!','mix','rot','gelb','orange'],
+['Ziehe mit dem orangenen Klecks eine Spur!','paint','orange'],
+['Schiebe Blau zu Gelb. Was entsteht?','mix','blau','gelb','gruen'],
+['Tippe dreimal auf Grün!','tap','gruen',3],
+['Schiebe Rot zu Blau und mische sie!','mix','rot','blau','lila'],
+['Mach den lila Klecks riesengroß!','size','lila',1.8],
+['Schiebe Rot zu Weiß.','mix','rot','weiss','rosa'],
+['Tippe auf jeden rosa Klecks, damit er verschwindet.','pop','rosa',5],
+['Mische Rot und Gelb noch einmal!','mix','rot','gelb','orange'],
+['Lass viele bunte Punkte erscheinen!','rain'],
+['Tippe auf fünf verschiedene Punkte.','many',5],
+['Lege deine Hand auf die bunten Punkte!','hand'],
+['Schau, eine Hand aus bunten Punkten! Tippe darauf.','stamp'],
+['Jetzt sind die Punkte überall. Tippe, um sie verschwinden zu lassen!','clear'],
+['Mische Blau und Gelb noch einmal!','mix','blau','gelb','gruen'],
+['Schiebe Rot zu Blau und beobachte die Mischfarbe!','mix','rot','blau','lila'],
+['Wische viermal kräftig hin und her.','shake',4],
+['Tippe auf den Regenbogen aus bunten Punkten!','rainbow'],
+['Tippe auf Rot, Gelb und Blau – nacheinander!','primary'],
+['Mische Gelb und Rot noch einmal!','mix','gelb','rot','orange'],
+['Mische Rot und Weiß noch einmal!','mix','rot','weiss','rosa'],
+['Mische Blau und Gelb noch einmal!','mix','blau','gelb','gruen'],
+['Tippe auf alle großen bunten Punkte!','final']
+];
+let page=0,completed=false,epoch=0,pending=null,cleanup=()=>{},touchCount=0;
+const total=tasks.length;
+function color(c){return colors[c]||c}
+function rect(){return scene.getBoundingClientRect()}
+function blob(c,x,y,size=110,kind='blob'){const el=document.createElement('div');el.className=kind;el.style.background=color(c);el.style.left=x+'%';el.style.top=y+'%';el.style.width=size+'px';el.style.height=size+'px';scene.appendChild(el);return el}
+function tap(el,fn){el.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(!completed)fn(e)})}
+function dotCloud(n=42,size=22,interactive=false){const palette=['rot','gelb','blau','gruen','orange','lila','rosa'];const list=[];const w=scene.clientWidth,h=scene.clientHeight;for(let i=0;i<n;i++){let sz=size*(.75+(i%5)*.11),x=12+Math.random()*Math.max(1,w-sz-24),y=12+Math.random()*Math.max(1,h-sz-24);let el=blob(palette[i%palette.length],0,0,sz,'dot');el.style.left=x+'px';el.style.top=y+'px';if(interactive)el.style.zIndex='2';list.push(el)}return list}
+function complete(message,delay=3800){if(completed)return;completed=true;prompt.textContent=message;hint.textContent='Schau dir die Farben in Ruhe an.';next.style.display='inline-block';next.textContent=page===total?'Zum Abschluss →':'Weiter →';clearTimeout(pending);const id=epoch;pending=setTimeout(()=>{if(epoch===id)goTo(page+1)},delay)}
+function goTo(n){clearTimeout(pending);try{cleanup()}catch(e){}cleanup=()=>{};epoch++;page=n;completed=false;touchCount=0;scene.replaceChildren();scene.onpointerdown=scene.onpointermove=scene.onpointerup=null;render()}
+function render(){back.style.display=page>0?'inline-block':'none';restart.style.display=page>0?'inline-block':'none';next.style.display=page===0||page>total?'inline-block':'none';counter.textContent=page===0?'29 Mitmachseiten':page>total?'Geschafft!':`Seite ${page} von ${total}`;hint.textContent='Entdecke, was du mit den Farben machen kannst!';
+if(page===0){prompt.textContent='Bist du bereit für ein buntes Abenteuer?';const d=blob('rot',36,29,130);d.style.pointerEvents='none';next.textContent='Spiel starten';return}
+if(page>total){prompt.textContent='Geschafft! Du bist ein Farben-Zauberer!';hint.textContent='Alle Farben tanzen für dich. Du kannst von vorne beginnen.';const arr=dotCloud(50,30);arr.forEach((e,i)=>{e.classList.add('enddot');e.style.animationDelay=(i%11)*-.18+'s'});next.textContent='Noch einmal spielen';return}
+const [label,type,a,b,c]=tasks[page-1];prompt.textContent=label;
+if(type==='tap'){const base=blob(a,36,25,130);const children=[];hint.textContent='Zähle mit: eins, zwei, drei.';tap(base,()=>{touchCount++;const el=blob(a,8+(touchCount-1)*30,66,55);children.push(el);if(touchCount>=b)complete('Eins, zwei, drei! So viele '+({rot:'rote',gelb:'gelbe',blau:'blaue',gruen:'grüne'}[a]||'bunte')+' Punkte!')})}
+if(type==='size'){const d=blob(a,36,26,125);tap(d,()=>{d.style.transform=`scale(${b})`;complete(b>1?'Wow! Riesengroß!':'Oh! Jetzt ist er winzig!')})}
+if(type==='paint'){
+ hint.textContent='Halte den Finger auf dem Klecks und bewege ihn hin und her.';
+ const cn=document.createElement('canvas');cn.width=scene.clientWidth*devicePixelRatio;cn.height=scene.clientHeight*devicePixelRatio;cn.style.zIndex='0';scene.appendChild(cn);const ctx=cn.getContext('2d');ctx.scale(devicePixelRatio,devicePixelRatio);ctx.strokeStyle=color(a);ctx.lineWidth=46;ctx.lineCap='round';ctx.lineJoin='round';ctx.globalAlpha=.7;
+ const d=blob(a,35,31,112);d.style.zIndex='2';let down=false,last=null,distance=0;
+ d.addEventListener('pointerdown',e=>{if(completed)return;e.preventDefault();e.stopPropagation();down=true;d.setPointerCapture(e.pointerId);last={x:e.clientX-rect().left,y:e.clientY-rect().top}});
+ d.addEventListener('pointermove',e=>{if(!down||completed)return;e.preventDefault();const bb=rect(),q={x:Math.max(0,Math.min(bb.width,e.clientX-bb.left)),y:Math.max(0,Math.min(bb.height,e.clientY-bb.top))};distance+=Math.hypot(q.x-last.x,q.y-last.y);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(q.x,q.y);ctx.stroke();d.style.left=Math.max(0,Math.min(bb.width-112,q.x-56))+'px';d.style.top=Math.max(0,Math.min(bb.height-112,q.y-56))+'px';last=q;if(distance>Math.min(550,bb.width*1.4)){down=false;complete('Schau! Du hast eine bunte Farbspur gemalt!',4500)}});
+ d.addEventListener('pointerup',()=>{down=false});d.addEventListener('pointercancel',()=>{down=false});
+}
+if(type==='mix'){
+ hint.textContent='Halte einen Klecks fest und ziehe ihn langsam zum anderen.';
+ const left=blob(a,6,29,118),right=blob(b,65,29,118),result=blob(c,35,30,118);left.style.zIndex='3';right.style.zIndex='3';result.style.zIndex='1';result.style.opacity='0';result.style.pointerEvents='none';
+ const blended=document.createElement('div');blended.className='paint-label';blended.textContent='';scene.appendChild(blended);
+ function handler(el,other){let moving=false,dx=0,dy=0;el.addEventListener('pointerdown',e=>{if(completed)return;e.preventDefault();e.stopPropagation();moving=true;el.setPointerCapture(e.pointerId);let rr=el.getBoundingClientRect();dx=e.clientX-rr.left;dy=e.clientY-rr.top});el.addEventListener('pointermove',e=>{if(!moving||completed)return;e.preventDefault();let bb=rect(),x=Math.max(0,Math.min(bb.width-118,e.clientX-bb.left-dx)),y=Math.max(0,Math.min(bb.height-118,e.clientY-bb.top-dy));el.style.left=x+'px';el.style.top=y+'px';let ea=el.getBoundingClientRect(),eb=other.getBoundingClientRect(),cx=ea.left+ea.width/2,cy=ea.top+ea.height/2,ox=eb.left+eb.width/2,oy=eb.top+eb.height/2;let dist=Math.hypot(cx-ox,cy-oy),progress=Math.max(0,Math.min(1,(190-dist)/125));result.style.opacity=String(progress);result.style.transform=`scale(${.65+progress*.5})`;if(progress>.97){moving=false;left.style.opacity='0';right.style.opacity='0';left.style.pointerEvents='none';right.style.pointerEvents='none';result.style.opacity='1';result.style.transform='scale(1.38)';blended.textContent=({orange:'ORANGE',gruen:'GRÜN',lila:'LILA',rosa:'ROSA'}[c]||'NEUE FARBE');complete('Sieh mal! Das ist '+({orange:'Orange',gruen:'Grün',lila:'Lila',rosa:'Rosa'}[c]||'eine neue Farbe')+'!',5500)}});el.addEventListener('pointerup',()=>moving=false);el.addEventListener('pointercancel',()=>moving=false)}handler(left,right);handler(right,left)
+}
+if(type==='pop'){let count=0;for(let i=0;i<b;i++){const el=blob(a,7+(i%3)*30,12+Math.floor(i/3)*43,75);tap(el,()=>{if(el.dataset.popped)return;el.dataset.popped='yes';el.style.opacity='0';el.style.transform='scale(.15)';el.style.pointerEvents='none';count++;hint.textContent=`${count} von ${b} Klecksen verschwunden`;if(count===b)complete('Alle rosa Kleckse sind verschwunden!')})}}
+if(type==='rain'){const base=blob('rot',36,30,125);tap(base,()=>{scene.replaceChildren();dotCloud(50,25);complete('So viele bunte Punkte!',5200)})}
+if(type==='many'){const els=dotCloud(32,30,true);let count=0;els.forEach(el=>tap(el,()=>{if(el.dataset.touched)return;el.dataset.touched='yes';el.style.transform='scale(1.8)';el.style.zIndex='3';count++;hint.textContent=`${count} von ${a} Punkten angetippt`;if(count===a)complete('Fünf Punkte sind groß geworden!',4500)}))}
+if(type==='hand'){dotCloud(55,24);hint.textContent='Lege deine Hand auf die Fläche.';scene.addEventListener('pointerdown',e=>{if(completed)return;e.preventDefault();scene.replaceChildren();drawDotHand();complete('Du hast eine bunte Punkte-Hand gezaubert!',5100)},{once:true})}
+if(type==='stamp'){drawDotHand();hint.textContent='Tippe auf den bunten Handabdruck.';tap(scene,()=>{scene.replaceChildren();let els=dotCloud(52,26);els.forEach((el,i)=>{el.style.opacity='0';el.style.transform='scale(.2)';requestAnimationFrame(()=>{el.style.opacity='1';el.style.transform='scale(1)'})});complete('Die bunten Hand-Punkte fliegen auseinander!',5100)})}
+if(type==='clear'){const els=dotCloud(42,30,true);hint.textContent='Einmal tippen – und alle Punkte verschwinden.';tap(scene,()=>{els.forEach((el,i)=>{el.style.opacity='0';el.style.transform='scale(.15)'});complete('Huch! Alle Punkte sind weg!',4200)})}
+if(type==='shake'){const els=dotCloud(24,29);hint.textContent='Wische viermal kräftig quer über die Fläche.';let down=null;scene.addEventListener('pointerdown',e=>{if(completed)return;down=e.clientX;scene.setPointerCapture(e.pointerId)});scene.addEventListener('pointerup',e=>{if(down===null||completed)return;let diff=Math.abs(e.clientX-down);down=null;if(diff<40)return;touchCount++;els.forEach(el=>{el.style.left=Math.random()*85+'%';el.style.top=Math.random()*78+'%'});hint.textContent=`${touchCount} von ${a} Mal geschüttelt`;if(touchCount>=a)complete('Alle Punkte tanzen durcheinander!',4400)})}
+if(type==='rainbow'){drawRainbow();hint.textContent='Tippe auf die bunten Regenbogenpunkte.';tap(scene,()=>{scene.replaceChildren();const els=dotCloud(35,27);complete('Der Regenbogen ist in viele Punkte zerplatzt!',4900)})}
+if(type==='primary'){let count=0;['rot','gelb','blau'].forEach((col,i)=>{const el=blob(col,5+i*32,34,100);tap(el,()=>{if(el.dataset.popped)return;el.dataset.popped='yes';el.style.opacity='0';el.style.transform='scale(.2)';count++;hint.textContent=`${count} von 3 Grundfarben verschwunden`;if(count===3)complete('Du kennst alle drei Grundfarben!',4600)})})}
+if(type==='final'){const cols=['rot','gelb','blau','gruen','orange','lila','rosa'];let count=0;cols.forEach((col,i)=>{const el=blob(col,7+(i%4)*23,13+Math.floor(i/4)*43,68);tap(el,()=>{if(el.dataset.popped)return;el.dataset.popped='yes';el.style.opacity='0';el.style.transform='scale(.2)';count++;hint.textContent=`${count} von ${cols.length} Farben entdeckt`;if(count===cols.length)complete('Du hast alle Farben gefunden! Bravo!',4700)})})}
+}
+function drawDotHand(){const W=scene.clientWidth,H=scene.clientHeight,off=document.createElement('canvas');off.width=Math.max(1,Math.round(W));off.height=Math.max(1,Math.round(H));const ctx=off.getContext('2d');ctx.fillStyle='#000';const scale=Math.min(W/360,H/350),x=W/2,y=H/2;ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
+// Palm, fingers and angled thumb create one contiguous child-sized hand silhouette.
+ctx.beginPath();ctx.ellipse(0,50,72,103,-.05,0,Math.PI*2);ctx.fill();const fingers=[[-60,-83,29,125],[-26,-133,29,150],[9,-150,29,165],[44,-121,29,143]];fingers.forEach(([fx,fy,fw,fh])=>{ctx.beginPath();ctx.roundRect(fx,fy,fw,fh,16);ctx.fill()});ctx.save();ctx.rotate(-.62);ctx.beginPath();ctx.roundRect(-113,-12,38,131,18);ctx.fill();ctx.restore();ctx.restore();const img=ctx.getImageData(0,0,off.width,off.height).data,cols=['rot','gelb','blau','gruen','orange','lila','rosa'];let index=0;for(let py=9;py<H-8;py+=11)for(let px=8;px<W-8;px+=11){let ix=Math.floor((py*off.width+px)*4+3);if(img[ix]>90){let el=blob(cols[index++%cols.length],0,0,7.5,'dot');el.style.left=px+'px';el.style.top=py+'px';el.style.pointerEvents='none'}}}
+function drawRainbow(){const W=scene.clientWidth,H=scene.clientHeight,cols=['rot','orange','gelb','gruen','blau','lila'];const cx=W/2,cy=H*.82,maxR=Math.min(W*.43,H*.77);let z=0;cols.forEach((c,i)=>{const R=maxR-i*19;for(let k=0;k<=Math.floor(Math.PI*R/14);k++){const theta=Math.PI+k/(Math.floor(Math.PI*R/14))*Math.PI,x=cx+R*Math.cos(theta),y=cy+R*Math.sin(theta);if(x<4||x>W-11||y<5||y>H-10)continue;let el=blob(c,0,0,11,'dot');el.style.left=x+'px';el.style.top=y+'px';el.style.pointerEvents='none';z++}})}
+next.addEventListener('click',()=>{if(page===0)goTo(1);else if(page>total)goTo(0);else goTo(page+1)});back.addEventListener('click',()=>goTo(Math.max(0,page-1)));restart.addEventListener('click',()=>goTo(0));window.addEventListener('pageshow',e=>{if(e.persisted)goTo(0)});goTo(0);
+})();
+</script></body></html>
