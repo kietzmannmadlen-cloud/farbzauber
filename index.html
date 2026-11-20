@@ -2,19 +2,34 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#fff9ef">
 <title>Farbzauber – Sprachspaß</title>
 <style>
 :root{font-family:ui-rounded,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#403456;background:#fff9ef;--violet:#7956bf}
-*{box-sizing:border-box}body{margin:0;min-height:100svh}main{max-width:770px;margin:0 auto;padding:12px clamp(10px,2vw,22px) 28px;text-align:center}
+*{box-sizing:border-box}html,body{margin:0;min-height:100svh;overflow:hidden;-webkit-text-size-adjust:100%}body{touch-action:manipulation;-webkit-user-select:none;user-select:none}main{max-width:770px;margin:0 auto;padding:12px clamp(10px,2vw,22px) 28px;text-align:center}
 h1{font-size:clamp(24px,4.3vw,32px);margin:5px 0 4px}#prompt{font-size:clamp(19px,3.1vw,25px);font-weight:750;min-height:55px;display:flex;align-items:center;justify-content:center;line-height:1.3;padding:4px}
 #scene{position:relative;height:clamp(340px,54vh,480px);background:#fffefa;border:2px solid #eee2d3;border-radius:24px;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;isolation:isolate}
 #scene canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}#scene .blob{position:absolute;border-radius:47% 53% 44% 56% / 55% 45% 52% 48%;box-shadow:inset -8px -8px 0 #0000000b;touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer;transition:transform .25s, opacity .3s}#scene .blob:active{filter:brightness(1.04)}
 #hint{min-height:31px;color:#756781;margin:9px 0;font-size:15px}.controls{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:9px;margin-top:10px}button{font:inherit;font-weight:750;background:var(--violet);color:white;border:0;border-radius:15px;padding:11px 19px;min-height:47px;cursor:pointer}button.secondary{background:#eee7fa;color:#5e438c}button:disabled{opacity:.45;cursor:not-allowed}#counter{font-size:13px;color:#86768f;margin-top:10px}.palette{display:flex;align-items:center;gap:7px;justify-content:center;flex-wrap:wrap;padding:8px 2px}.swatch{width:47px;height:47px;padding:0;min-height:0;border:4px solid white;box-shadow:0 0 0 1px #ded3df, 0 2px 5px #00000018;border-radius:50%}.swatch.selected{box-shadow:0 0 0 4px #6d4daf,0 3px 9px #00000020;transform:scale(1.07)}.swatch:focus-visible{outline:3px solid #302044;outline-offset:6px}.end-bubble{position:absolute;border-radius:50%;animation:float 3s ease-in-out infinite alternate;pointer-events:none}@keyframes float{to{transform:translate(5px,-18px)}}@media(prefers-reduced-motion:reduce){.end-bubble{animation:none}}#tools{display:none}#paintNote{margin:4px 0;font-size:14px;color:#6b5685}#certificate{display:none}.cert-inner{border:10px double #b38add;padding:36px;text-align:center;min-height:610px;background:#fffdf5}.cert-inner h2{font-size:46px;color:#7956bf}.cert-inner h3{font-size:34px}.cert-inner p{font-size:23px;line-height:1.6}.cert-dots{display:flex;justify-content:center;gap:13px;margin:33px 0}.cert-dots span{height:35px;width:35px;border-radius:50%}.cert-footer{margin-top:85px;border-top:2px solid #b38add;padding-top:12px;font-size:16px}
-@media print{body{background:white!important}main{display:none!important}#certificate{display:block!important;position:static!important;padding:15mm}button{display:none!important}.cert-inner{height:240mm;break-inside:avoid}}@page{size:A4 portrait;margin:0}
+@media print{
+  html,body{width:100%!important;height:auto!important;min-height:0!important;overflow:visible!important;background:white!important}
+  main{display:none!important}
+  #certificate{display:block!important;position:static!important;width:100%;padding:0!important;margin:0 auto!important;break-inside:avoid;page-break-inside:avoid}
+  .cert-inner{box-sizing:border-box!important;min-height:0!important;height:224mm!important;padding:17mm 13mm!important;border-width:7px!important;break-inside:avoid;page-break-inside:avoid}
+  .cert-inner h2{font-size:34px!important;margin:0 0 14px!important}
+  .cert-inner h3{font-size:25px!important;line-height:1.25!important;margin:12px 0!important}
+  .cert-inner p{font-size:17px!important;line-height:1.4!important;margin:13px 0!important}
+  .cert-inner p[style]{margin-top:29px!important}
+  .cert-dots{margin:18px 0!important;gap:9px!important}
+  .cert-dots span{width:25px!important;height:25px!important}
+  .cert-footer{margin-top:35px!important;padding-top:10px!important;font-size:13px!important}
+  button{display:none!important}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+@page{size:A4 portrait;margin:12mm}
 </style>
 </head>
 <body>
@@ -88,19 +103,21 @@ function stop(e){if(id===e.pointerId){id=null;unlockPointer(e.pointerId)}}el.add
 function wSafe(){return scene.clientWidth}
 function rainbowGeometry(w,h){const outer=Math.min(w*.46,h*.75);const bw=Math.min(26,outer/7.4);return {cx:w/2,cy:h*.88,outer,bw}}
 function rainbowPage(){tools.style.display='block';hint.textContent='Wähle einen Farbklecks und male den Regenbogen an. Du kannst dir Zeit lassen.';palette.replaceChildren();const swatches=['rot','orange','gelb','gruen','blau','lila','rosa'];currentPaint='rot';swatches.forEach(key=>{let b=document.createElement('button');b.className='swatch'+(key==='rot'?' selected':'');b.style.background=color(key);b.setAttribute('aria-label','Pinsel: '+names[key]);b.title=names[key];b.onclick=()=>{currentPaint=key;[...palette.children].forEach(x=>x.classList.remove('selected'));b.classList.add('selected')};palette.appendChild(b)});
-let {c:draw,ctx:dc,w,h}=layer();let bg=layer();bg.c.style.pointerEvents='none';bg.c.style.zIndex='3';draw.style.zIndex='2';const g=rainbowGeometry(w,h);function outlines(){const {cx,cy,outer,bw}=g;bg.ctx.clearRect(0,0,w,h);bg.ctx.lineCap='butt';for(let i=0;i<6;i++){let r=outer-(i+.5)*bw;bg.ctx.beginPath();bg.ctx.arc(cx,cy,r,Math.PI,Math.PI*2);bg.ctx.lineWidth=bw-1;bg.ctx.strokeStyle='#f6f1f7';bg.ctx.stroke();bg.ctx.lineWidth=1.6;bg.ctx.strokeStyle='#897d94';bg.ctx.beginPath();bg.ctx.arc(cx,cy,r+bw/2,Math.PI,Math.PI*2);bg.ctx.stroke();bg.ctx.beginPath();bg.ctx.arc(cx,cy,r-bw/2,Math.PI,Math.PI*2);bg.ctx.stroke()}}
-outlines();let painting=null,last=null;const {cx,cy,outer,bw}=g;
-function paintAt(pt){const dx=pt.x-cx,dy=pt.y-cy,r=Math.hypot(dx,dy);if(dy>0||r>outer||r<outer-6*bw)return;dc.beginPath();dc.arc(pt.x,pt.y,bw*.62,0,Math.PI*2);dc.fillStyle=color(currentPaint);dc.fill()}
-function drawSegment(a,b){let n=Math.max(1,Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)/3));for(let i=0;i<=n;i++){let f=i/n;paintAt({x:a.x+(b.x-a.x)*f,y:a.y+(b.y-a.y)*f})}}
-draw.addEventListener('pointerdown',e=>{e.preventDefault();if(!lockPointer(e))return;painting=e.pointerId;draw.setPointerCapture(e.pointerId);last=position(e);drawSegment(last,last);paintHasStroke=true});draw.addEventListener('pointermove',e=>{if(painting!==e.pointerId)return;e.preventDefault();const p=position(e);drawSegment(last,p);last=p;paintHasStroke=true});function stop(e){if(painting===e.pointerId){painting=null;unlockPointer(e.pointerId)}}draw.addEventListener('pointerup',stop);draw.addEventListener('pointercancel',stop);draw.addEventListener('lostpointercapture',stop);
+let {c:draw,ctx:dc,w,h}=layer();let guide=layer();guide.c.style.pointerEvents='none';guide.c.style.zIndex='1';draw.style.zIndex='2';const g=rainbowGeometry(w,h);
+function guides(){const {cx,cy,outer,bw}=g;guide.ctx.clearRect(0,0,w,h);guide.ctx.lineCap='round';for(let i=0;i<6;i++){let r=outer-(i+.5)*bw;guide.ctx.beginPath();guide.ctx.arc(cx,cy,r,Math.PI,Math.PI*2);guide.ctx.lineWidth=bw-7;guide.ctx.strokeStyle='rgba(255,255,255,0.55)';guide.ctx.stroke();guide.ctx.beginPath();guide.ctx.arc(cx,cy,r+bw/2,Math.PI,Math.PI*2);guide.ctx.lineWidth=2;guide.ctx.strokeStyle='rgba(121,86,191,0.35)';guide.ctx.stroke();guide.ctx.beginPath();guide.ctx.arc(cx,cy,r-bw/2,Math.PI,Math.PI*2);guide.ctx.lineWidth=2;guide.ctx.strokeStyle='rgba(121,86,191,0.20)';guide.ctx.stroke()}}
+guides();let painting=null,last=null;const {cx,cy,outer,bw}=g;
+function insideBand(pt){const dx=pt.x-cx,dy=pt.y-cy,r=Math.hypot(dx,dy);return !(dy>0||r>outer||r<outer-6*bw)}
+function paintAt(pt){if(!insideBand(pt))return;dc.beginPath();dc.arc(pt.x,pt.y,bw*.62,0,Math.PI*2);dc.fillStyle=color(currentPaint);dc.globalAlpha=.98;dc.fill()}
+function drawSegment(a,b){let n=Math.max(1,Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)/2.5));for(let i=0;i<=n;i++){let f=i/n;paintAt({x:a.x+(b.x-a.x)*f,y:a.y+(b.y-a.y)*f})}}
+draw.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(!lockPointer(e))return;painting=e.pointerId;try{draw.setPointerCapture(e.pointerId)}catch(_){};last=position(e);drawSegment(last,last);paintHasStroke=true});draw.addEventListener('pointermove',e=>{if(painting!==e.pointerId)return;e.preventDefault();e.stopPropagation();const p=position(e);drawSegment(last,p);last=p;paintHasStroke=true});function stop(e){if(painting===e.pointerId){painting=null;unlockPointer(e.pointerId)}}draw.addEventListener('pointerup',stop);draw.addEventListener('pointercancel',stop);draw.addEventListener('lostpointercapture',stop);
 eraser.onclick=()=>{if(activePointer!==null)return;dc.clearRect(0,0,w,h);paintHasStroke=false};next.disabled=false;next.textContent='Fertig! Zur Urkunde →';
-}
-function endScreen(){prompt.textContent='Super! Du bist jetzt ein echter Farbprofi!';hint.textContent='Hier ist deine Urkunde zum Ausdrucken. Oder spielt noch einmal!';const {w,h}=dimensions(),keys=['rot','gelb','blau','gruen','orange','lila','rosa'];for(let i=0;i<32;i++){let sz=17+(i%4)*9;let el=blob(keys[i%keys.length],12+Math.random()*(w-sz-24),10+Math.random()*(h-sz-20),sz);el.classList.add('end-bubble');el.style.animationDelay=-(i%9)*.3+'s';el.style.pointerEvents='none'}print.style.display='inline-block';}
+}function endScreen(){prompt.textContent='Super! Du bist jetzt ein echter Farbprofi!';hint.textContent='Hier ist deine Urkunde zum Ausdrucken. Oder spielt noch einmal!';const {w,h}=dimensions(),keys=['rot','gelb','blau','gruen','orange','lila','rosa'];for(let i=0;i<32;i++){let sz=17+(i%4)*9;let el=blob(keys[i%keys.length],12+Math.random()*(w-sz-24),10+Math.random()*(h-sz-20),sz);el.classList.add('end-bubble');el.style.animationDelay=-(i%9)*.3+'s';el.style.pointerEvents='none'}print.style.display='inline-block';}
 next.addEventListener('click',()=>{if(page===0)show(1);else if(page===15)show(16);else if(done||tasks[page-1]?.[1]==='paint')show(page+1)});
 back.addEventListener('click',()=>show(Math.max(0,page-1)));
 restart.addEventListener('click',()=>show(0));
 print.addEventListener('click',()=>window.print());
 window.addEventListener('pageshow',e=>{if(e.persisted)show(0)});
+window.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});window.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
 show(0);
 })();
 </script>
